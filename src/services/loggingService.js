@@ -11,7 +11,7 @@ import {
   splitComparisonFields,
 } from '../utils/logging/logEmbeds.js';
 
-const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages', 'roles', 'joins'];
+const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages', 'roles', 'joins', 'spam'];
 
 const EVENT_TYPES = {
   MODERATION_BAN: 'moderation.ban',
@@ -43,6 +43,8 @@ const EVENT_TYPES = {
   MEMBER_NAME_CHANGE: 'member.namechange',
   MEMBER_ROLE_ADD: 'member.roleadd',
   MEMBER_ROLE_REMOVE: 'member.roleremove',
+
+  SPAM_DETECTED: 'spam.detected',
 
   REACTION_ROLE_ADD: 'reactionrole.add',
   REACTION_ROLE_REMOVE: 'reactionrole.remove',
@@ -87,6 +89,7 @@ const EVENT_COLORS = {
   'role.update': 0x3498db,
   'member.join': 0x2ecc71,
   'member.leave': 0xe74c3c,
+  'spam.detected': 0xe67e22,
   'member.namechange': 0x3498db,
   'member.roleadd': 0x2ecc71,
   'member.roleremove': 0xe74c3c,
@@ -129,6 +132,7 @@ const EVENT_ICONS = {
   'role.update': '🔄',
   'member.join': '👋',
   'member.leave': '👋',
+  'spam.detected': '🚫',
   'member.namechange': '🏷️',
   'member.roleadd': '🎖️',
   'member.roleremove': '🚫',
@@ -152,6 +156,7 @@ const CATEGORY_DESTINATION = {
   application: 'applications',
   report: 'reports',
   message: 'messages',
+  spam: 'spam',
 };
 
 // Specific events that go to their own destination, overriding the category
@@ -209,7 +214,7 @@ function getLogChannelForEvent(config, eventType, overrideChannelId = null) {
   const channelId = resolveLogChannel(config, destination);
 
   // Message and role logs fall back to the audit channel until their own channel is set
-  if (!channelId && (destination === 'messages' || destination === 'roles' || destination === 'joins')) {
+  if (!channelId && (destination === 'messages' || destination === 'roles' || destination === 'joins' || destination === 'spam')) {
     return resolveLogChannel(config, 'audit');
   }
 
@@ -376,7 +381,7 @@ export async function getLoggingStatus(client, guildId) {
 
   return {
     enabled: logging.enabled || false,
-    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null, roles: null, joins: null },
+    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null, roles: null, joins: null, spam: null },
     channelId: logging.channels?.audit ?? null,
     ignore: getIgnoreList(config),
     enabledEvents: logging.enabledEvents || {},

@@ -33,6 +33,7 @@ export default {
                             { name: 'Messages (deleted / edited)', value: 'messages' },
                             { name: 'Roles (given / removed)', value: 'roles' },
                             { name: 'Joins (new members)', value: 'joins' },
+                            { name: 'Spam (repeated messages / pings)', value: 'spam' },
                         ),
                 )
                 .addChannelOption((option) =>
