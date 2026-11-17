@@ -18,8 +18,9 @@ export const LoggingChannelsSchema = z
     messages: z.string().nullable().optional(),
     roles: z.string().nullable().optional(),
     joins: z.string().nullable().optional(),
+    spam: z.string().nullable().optional(),
   })
-  .default({ audit: null, applications: null, reports: null, messages: null, roles: null, joins: null });
+  .default({ audit: null, applications: null, reports: null, messages: null, roles: null, joins: null, spam: null });
 
 export const LoggingConfigSchema = z
   .object({
@@ -105,7 +106,7 @@ export const EconomyDataSchema = z
 
 const DEFAULT_LOGGING = {
   enabled: false,
-  channels: { audit: null, applications: null, reports: null, messages: null, roles: null, joins: null },
+  channels: { audit: null, applications: null, reports: null, messages: null, roles: null, joins: null, spam: null },
   ignore: { users: [], channels: [] },
   enabledEvents: {},
 };
@@ -157,6 +158,7 @@ function migrateLoggingConfig(raw = {}, legacy = {}) {
       messages: base.channels?.messages ?? null,
       roles: base.channels?.roles ?? null,
       joins: base.channels?.joins ?? null,
+      spam: base.channels?.spam ?? null,
     },
     ignore,
     enabledEvents: base.enabledEvents ?? {},

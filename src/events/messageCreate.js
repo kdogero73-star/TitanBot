@@ -1,4 +1,5 @@
 import { Events, PermissionsBitField } from 'discord.js';
+import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling/leveling.js';
 import { addXp } from '../services/leveling/xpSystem.js';
@@ -34,6 +35,7 @@ export default {
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
       await handleEveryonePing(message);
+      await handleSpam(message);
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
@@ -48,6 +50,104 @@ export default {
     }
   }
 };
+
+const SPAM_WINDOW_MS = 60000;      // look at the last 60 seconds
+const SPAM_REPEAT_LIMIT = 3;       // the 3rd identical item ("more than twice") triggers
+const SPAM_WARNING_COOLDOWN_MS = 30000;
+const spamHistory = new Map();     // `${guildId}:${userId}` -> [{ time, text, files, mentions }]
+const spamWarnings = new Map();
+
+function spamFingerprint(message) {
+  const text = (message.content || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Same picture = same file name and size (Discord gives every upload a new URL)
+  const files = [...message.attachments.values()].map((a) => `${a.name}:${a.size}`);
+  const mentions = [
+    ...message.mentions.users.keys(),
+    ...message.mentions.roles.keys(),
+  ].filter((id) => id !== message.author.id);
+  return { text, files, mentions };
+}
+
+function findSpamReason(history) {
+  const count = (items) => {
+    const tally = new Map();
+    for (const item of items) tally.set(item, (tally.get(item) || 0) + 1);
+    return tally;
+  };
+
+  for (const [text, n] of count(history.map((h) => h.text).filter((t) => t.length > 0))) {
+    if (n >= SPAM_REPEAT_LIMIT) return { type: 'the same message', detail: text.slice(0, 200) };
+  }
+  for (const [file, n] of count(history.flatMap((h) => [...new Set(h.files)]))) {
+    if (n >= SPAM_REPEAT_LIMIT) return { type: 'the same picture/file', detail: file.split(':')[0] };
+  }
+  for (const [id, n] of count(history.flatMap((h) => [...new Set(h.mentions)]))) {
+    if (n >= SPAM_REPEAT_LIMIT) return { type: 'the same mention', detail: `<@${id}> / <@&${id}>` };
+  }
+  return null;
+}
+
+async function handleSpam(message) {
+  try {
+    // Staff are exempt, same as the @everyone warning
+    const perms = message.member?.permissions;
+    if (perms?.has(PermissionsBitField.Flags.Administrator) || perms?.has(PermissionsBitField.Flags.ManageMessages)) {
+      return;
+    }
+
+    const fp = spamFingerprint(message);
+    if (!fp.text && fp.files.length === 0 && fp.mentions.length === 0) return;
+
+    const key = `${message.guild.id}:${message.author.id}`;
+    const now = Date.now();
+    const history = (spamHistory.get(key) || []).filter((h) => now - h.time < SPAM_WINDOW_MS);
+    history.push({ time: now, ...fp });
+    spamHistory.set(key, history);
+
+    // Keep the maps from growing forever
+    if (spamHistory.size > 2000) {
+      for (const [k, items] of spamHistory) {
+        if (!items.some((h) => now - h.time < SPAM_WINDOW_MS)) spamHistory.delete(k);
+      }
+    }
+
+    const reason = findSpamReason(history);
+    if (!reason) return;
+
+    // One warning per cooldown; clear history so the next burst starts fresh
+    if (now - (spamWarnings.get(key) || 0) < SPAM_WARNING_COOLDOWN_MS) return;
+    spamWarnings.set(key, now);
+    spamHistory.delete(key);
+
+    await message.channel.send({
+      content: `${message.author}, please stop spamming. You repeated ${reason.type} too many times.`,
+      allowedMentions: { users: [message.author.id] },
+    });
+
+    await logEvent({
+      client: message.client,
+      guildId: message.guild.id,
+      eventType: EVENT_TYPES.SPAM_DETECTED,
+      data: {
+        title: 'Spam detected',
+        lines: [
+          `**User:** ${message.author.toString()} (${message.author.tag})`,
+          `**ID:** \`${message.author.id}\``,
+          `**Channel:** ${message.channel.toString()}`,
+          `**Repeated:** ${reason.type}`,
+          `**Content:** ${reason.detail || '(none)'}`,
+        ],
+        thumbnail: message.author.displayAvatarURL({ dynamic: true }),
+        userId: message.author.id,
+      },
+    });
+  } catch (error) {
+    logger.warn('Failed to handle spam detection:', error);
+  }
+}
 
 async function handleEveryonePing(message) {
   try {

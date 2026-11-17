@@ -29,6 +29,7 @@ export const DASHBOARD_CATEGORIES = [
   'counter',
   'application',
   'report',
+  'spam',
 ];
 
 const DASHBOARD_CATEGORY_EMOJIS = {
@@ -42,6 +43,7 @@ const DASHBOARD_CATEGORY_EMOJIS = {
   counter: '📊',
   application: '📝',
   report: '🚨',
+  spam: '🚫',
 };
 
 export const DASHBOARD_CATEGORY_LABELS = {
@@ -55,6 +57,7 @@ export const DASHBOARD_CATEGORY_LABELS = {
   counter: 'Counters',
   application: 'Applications',
   report: 'Reports',
+  spam: 'Spam',
 };
 
 function createBackButton() {
@@ -125,6 +128,11 @@ export function createLoggingMainMenuSelect() {
           .setValue('set:joins')
           .setEmoji('📥'),
         new StringSelectMenuOptionBuilder()
+          .setLabel('Set Spam Channel')
+          .setDescription('Repeated messages, pictures and mentions')
+          .setValue('set:spam')
+          .setEmoji('🚫'),
+        new StringSelectMenuOptionBuilder()
           .setLabel('Clear Audit Channel')
           .setValue('clear:audit')
           .setEmoji('🗑️'),
@@ -147,6 +155,10 @@ export function createLoggingMainMenuSelect() {
         new StringSelectMenuOptionBuilder()
           .setLabel('Clear Joins Channel')
           .setValue('clear:joins')
+          .setEmoji('🗑️'),
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Clear Spam Channel')
+          .setValue('clear:spam')
           .setEmoji('🗑️'),
         new StringSelectMenuOptionBuilder()
           .setLabel('Event Categories')

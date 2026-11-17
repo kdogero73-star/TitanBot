@@ -40,6 +40,7 @@ const DESTINATION_LABELS = {
   messages: 'Messages',
   roles: 'Roles',
   joins: 'Joins',
+  spam: 'Spam',
 };
 
 export default {
