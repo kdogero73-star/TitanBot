@@ -145,18 +145,14 @@ async function handleSpam(message) {
       },
     });
 
-    // Tell the server owner by DM (fails quietly if their DMs are closed)
+    // DM the spammer (fails quietly if their DMs are closed)
     try {
-      const owner = await message.guild.fetchOwner();
-      await owner.send(
-        `🚫 **Spam detected in ${message.guild.name}**\n` +
-        `**User:** ${message.author.tag} (${message.author.id})\n` +
-        `**Channel:** #${message.channel.name}\n` +
-        `**Repeated:** ${reason.type}\n` +
-        `**Content:** ${reason.detail || '(none)'}`
+      await message.author.send(
+        `🚫 **Please stop spamming in ${message.guild.name}.**\n` +
+        `You repeated ${reason.type} too many times. Continued spamming may lead to a mute, kick or ban.`
       );
     } catch (error) {
-      logger.debug(`Could not DM server owner about spam: ${error.message}`);
+      logger.debug(`Could not DM spammer ${message.author.id}: ${error.message}`);
     }
   } catch (error) {
     logger.warn('Failed to handle spam detection:', error);
